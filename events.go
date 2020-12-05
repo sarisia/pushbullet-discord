@@ -26,7 +26,7 @@ var httpCli = &http.Client{
 
 func NewPushToDiscordHandler(webhook string) func(context.Context, *PushPayload) {
 	return func(_ context.Context, p *PushPayload) {
-		if p.Push.Type == "dismissal" {
+		if p.Push.Type != "push" {
 			return
 		}
 
