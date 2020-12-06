@@ -7,7 +7,16 @@ import (
 	_ "github.com/joho/godotenv/autoload"
 )
 
+var (
+	date   = "unknown"
+	commit = "unknown"
+)
+
 func main() {
+	// print info
+	log.Printf("Pushbullet-Discord")
+	log.Printf("%s - %s", date, commit)
+
 	// Pushbullet token
 	pbToken := os.Getenv("PUSHBULLET_TOKEN")
 	if pbToken == "" {
