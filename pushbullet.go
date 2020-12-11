@@ -72,6 +72,7 @@ type PushbulletClient struct {
 	// internal field
 	cancel    func()
 	handlerMu sync.RWMutex
+	wg        sync.WaitGroup
 	handlers  map[string][]payloadHandler
 }
 
@@ -95,7 +96,7 @@ func (c *PushbulletClient) AddHandler(i interface{}) {
 	c.handlers[h.typ()] = append(c.handlers[h.typ()], h)
 }
 
-func (c *PushbulletClient) Open() {
+func (c *PushbulletClient) open(syncExec bool) {
 	if c.cancel != nil {
 		log.Printf("already opened")
 		return
@@ -111,7 +112,23 @@ func (c *PushbulletClient) Open() {
 		return
 	}
 
-	go c.recvLoop(ctx, conn)
+	c.wg.Add(1)
+	go func() {
+		c.recvLoop(ctx, conn)
+		c.wg.Done()
+	}()
+
+	if syncExec {
+		c.wg.Wait()
+	}
+}
+
+func (c *PushbulletClient) Open() {
+	c.open(false)
+}
+
+func (c *PushbulletClient) OpenSync() {
+	c.open(true)
 }
 
 func (c *PushbulletClient) Close() {
@@ -121,6 +138,11 @@ func (c *PushbulletClient) Close() {
 
 	c.cancel()
 	c.cancel = nil
+	c.wg.Wait()
+}
+
+func (c *PushbulletClient) Wait() {
+	c.wg.Wait()
 }
 
 func (c *PushbulletClient) recvLoop(ctx context.Context, conn *websocket.Conn) {
@@ -134,8 +156,6 @@ func (c *PushbulletClient) recvLoop(ctx context.Context, conn *websocket.Conn) {
 
 		go c.handlePacket(ctx, typ, b)
 	}
-
-	c.Close()
 }
 
 func (c *PushbulletClient) handlePacket(ctx context.Context, typ websocket.MessageType, b []byte) {

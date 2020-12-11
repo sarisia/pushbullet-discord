@@ -34,6 +34,9 @@ func main() {
 	cli := NewPushbulletClient(pbToken)
 	cli.AddHandler(NewPushToDiscordHandler(webhook))
 
-	cli.Open()
-	<-make(chan struct{})
+	for {
+		cli.OpenSync()
+		cli.Close()
+		log.Printf("client crashed. Restarting...")
+	}
 }
